@@ -155,7 +155,7 @@ export async function getContent(MainCollection:string,type:string, env: any) {
     MainCollection = "Irya Collection";
   }
   MainCollection = MainCollection.trim()? MainCollection.replace(/\s+/g, '+'): MainCollection;
-  const filterUrl = `https://paksha.com/collections/${MainCollection}?filter.p.m.custom.product_types=${type}`;
+  const filterUrl = "https://paksha.com/collections/tyarra-collection/products/lunea-cz-silver-pendant-necklace";
   const description = await fetchFirstProductDescription(filterUrl);
   return description;
 
