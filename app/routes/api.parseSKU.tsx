@@ -1,6 +1,6 @@
 // app/routes/api.parseSKU.tsx
 import type { ActionFunction, LoaderFunction } from "@remix-run/cloudflare";
-import { generateData, GetGoogleData, jsonTo2DArray } from "~/lib/skuParser";
+import { generateData, GetGoogleData } from "~/lib/skuParser";
 declare global {
   interface CloudflareEnvironment {
     GOOGLE_SHEETS_API_KEY: string;

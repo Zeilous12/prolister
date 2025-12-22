@@ -91,6 +91,7 @@ export function processTitle(title: string) {
 
 }
 
+<<<<<<< HEAD
 // Replace content between <Description> tags with new content
 export function replaceDescription(html: string, newContent: string): string {
   if (!html) return html;
@@ -161,6 +162,8 @@ export async function getContent(MainCollection:string,type:string, env: any) {
 
 }
 
+=======
+>>>>>>> baec005 (Removed Description, added simple content.)
 export function isHomogeneous(csvData: string[][], env: any): boolean {
   // Check if we have at least 2 products (1 header + 2+ rows)
   if (csvData.length <= 2) {
@@ -294,7 +297,7 @@ const Tags = ["NEW",Type,...subtypes,stoneColor,plating];
 const allTags = Tags.filter(Boolean) as string[];
 
 //adding description
-const Bodyhtml = await getContent(MainCollection,Type,env);
+const Bodyhtml = sheetData.find(row => row[7] === sku)?.[10] ??  "No description available";
 console.info({ 
   sku, 
   BodyhtmlLength: Bodyhtml?.length || 0, 
@@ -307,24 +310,14 @@ console.info({
   description, 
   descriptionLength: description?.length || 0 
 }, "DEBUG: Description from sheet");
-let content = replaceDescription(Bodyhtml,description);
-  if (content === "") {
-    content = description;
-  }
-console.info({ 
-  sku, 
-  contentLength: content?.length || 0, 
-  contentPreview: content?.substring(0, 100) || "empty",
-  contentIsSameAsBodyhtml: content === Bodyhtml,
-  contentIsSameAsDescription: content === description
-}, "DEBUG: Final content after replaceDescription");
+ 
 const finalProductType = (Type === "Ring") ? "Finger Ring" : Type;
 
   return {
     collections: totalCollections,
     title: title,
     tags: Array.from(allTags),
-    content: content,
+    content: Bodyhtml,
     productType: finalProductType,
     seotitle: seotitle
   };
