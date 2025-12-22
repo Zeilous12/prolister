@@ -1,12 +1,13 @@
 
 import { useState } from "react";
-// ... code...
-import { action as parseAction } from '~/api/parseSKU.server';
-
-export const action = async ({ request, context }: any) => {
-  return parseAction({ request, context });
+import type { MetaFunction } from "@remix-run/cloudflare";
+export const meta: MetaFunction = () => {
+  return [
+    { title: "SKU Parser - Shopify CSV Generator" },
+    { name: "description", content: "Generate Shopify CSV from SKUs" },
+  ];
 };
-// ... code...
+
 
 interface ApiResponse {
   data?: {
@@ -15,12 +16,12 @@ interface ApiResponse {
 }
 
 export default function Home() {
-  // Simplified states
   const [sku, setSku] = useState("");
   const [processStage, setProcessStage] = useState<'initial' | 'processing' | 'ready' | 'completed'>('initial');
   const [detectedType, setDetectedType] = useState<'single' | 'multiple' | ''>('');
   const [csvBlob, setCsvBlob] = useState<Blob | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // UI Helper Components
   const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -38,41 +39,47 @@ export default function Home() {
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
   );
-
-  // POST hook for CSV generation
-  const generateCSV = async (skuInput: string, detectedType: 'single' | 'multiple'): Promise<ApiResponse & { csvBlob?: Blob }> => {
+  // POST hook for CSV generation - UPDATED
+  const generateCSV = async (skuInput: string, detectedType: 'single' | 'multiple'): Promise<{ success: boolean; csvBlob?: Blob }> => {
     try {
-      console.log('Calling API:', 'api/parseSKU');
+      console.log('Calling API:', '/api/parseSKU');
+      setError(null);
 
-      const response = await fetch('api/parseSKU', {
+      // Use JSON payload
+      const response = await fetch('/api/parseSKU', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sku: skuInput })
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          sku: skuInput,
+          type: detectedType // You can use this in your backend if needed
+        })
       });
+
       console.log('Response status:', response.status);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
-      // Get CSV as blob for download
-      const blob = await response.blob();
-      setCsvBlob(blob);
-      
-      return {
-        data: {
-          success: true
-        },
-        csvBlob: blob
-      };
+      // Check if response is CSV
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('text/csv')) {
+        const blob = await response.blob();
+        setCsvBlob(blob);
+        return { success: true, csvBlob: blob };
+      } else {
+        // Handle JSON error response
+        const errorData = await response.json();
+        throw new Error('Invalid response format');
+      }
       
     } catch (error) {
       console.error('CSV generation error:', error);
-      return {
-        data: {
-          success: false
-        }
-      };
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      return { success: false };
     }
   };
 
@@ -84,7 +91,9 @@ export default function Home() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'matrixify-import.csv';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     
     setProcessStage('completed');
@@ -94,10 +103,13 @@ export default function Home() {
   const handleSkuSubmit = async () => {
     const skuInput = sku.trim();
     
-    if (!skuInput) return;
+    if (!skuInput) {
+      setError("Please enter at least one SKU");
+      return;
+    }
     
     // Detect type
-    const type: 'single' | 'multiple' = skuInput.length <= 14 ? 'single' : 'multiple';
+    const type: 'single' | 'multiple' = skuInput.includes('\n') || skuInput.includes(',') ? 'multiple' : 'single';
     setDetectedType(type);
     
     setProcessStage('processing');
@@ -105,7 +117,7 @@ export default function Home() {
     try {
       const result = await generateCSV(skuInput, type);
       
-      if (result.data?.success) {
+      if (result.success) {
         setProcessStage('ready'); // Ready for download
       } else {
         setProcessStage('initial');
@@ -116,18 +128,30 @@ export default function Home() {
     }
   };
 
-  const toggleForm = () => setShowForm(!showForm);
+  const toggleForm = () => {
+    setShowForm(!showForm);
+    setError(null);
+  };
+
   const handleReset = () => {
     setProcessStage('initial');
     setSku("");
     setCsvBlob(null);
     setShowForm(false);
+    setError(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Product Listing</h1>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
 
         {/* Initial State */}
         {processStage === 'initial' && !showForm && (
@@ -170,22 +194,39 @@ export default function Home() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    SKU
+                    Enter SKU(s)
                   </label>
                   <textarea
                     value={sku}
-                    onChange={(e) => setSku(e.target.value)}
-                    placeholder="Enter SKU or multiple SKUs"
+                    onChange={(e) => {
+                      setSku(e.target.value);
+                      setError(null);
+                    }}
+                    placeholder="Enter one SKU per line, or separate with commas"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
+                    rows={5}
                   />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Multiple SKUs allowed. Separate with new lines, commas, or spaces.
+                  </p>
                 </div>
-                <button
-                  onClick={handleSkuSubmit}
-                  className="px-4 py-2 bg-gray-900 text-white font-medium rounded-md hover:bg-blue-700 transition"
-                >
-                  Generate CSV
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSkuSubmit}
+                    className="px-4 py-2 bg-gray-900 text-white font-medium rounded-md hover:bg-blue-700 transition"
+                  >
+                    Generate CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowForm(false);
+                      setError(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </Card>
           </Section>
@@ -199,6 +240,9 @@ export default function Home() {
                 <Spinner />
                 <p className="text-gray-900">
                   Processing {detectedType === 'single' ? 'single SKU' : 'multiple SKUs'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  This may take a moment while we fetch data...
                 </p>
               </div>
             </Card>
@@ -214,7 +258,7 @@ export default function Home() {
                   CSV Generated Successfully!
                 </h3>
                 <p className="text-gray-600">
-                  Your CSV file is ready for download.
+                  Your Shopify CSV file is ready for download.
                 </p>
                 <div className="flex gap-3 justify-center">
                   <button
@@ -244,7 +288,7 @@ export default function Home() {
                   CSV Downloaded Successfully!
                 </h3>
                 <p className="text-gray-600">
-                  Your Matrixify import file is ready.
+                  Your Matrixify import file has been downloaded.
                 </p>
                 <div className="flex gap-3 justify-center">
                   <button

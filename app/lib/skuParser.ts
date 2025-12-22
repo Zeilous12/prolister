@@ -1,49 +1,7 @@
 import * as cheerio from 'cheerio';
 
-// Export the POST handler function
-export async function action({ request, context }: { request: Request, context: { env: any } }) {
-  try {
-    const { sku } = await request.json() as { sku: string };
-    
-    // 1. Parse SKU
-    const skuInput = sku.toUpperCase().trim();
-    const skuList = skuInput
-      .split(/[\n,;\t\s]+/)
-      .map(s => s.trim())
-      .filter(s => s);
-    
-    // REMOVE DUPLICATES - keep first occurrence
-    const uniqueSkus = [...new Set(skuList)];
-
-    // 2. Get Sheet Data
-    const GoogleData = await GetGoogleData(context.env);
-    if (!GoogleData.success || !Array.isArray(GoogleData.data)) {
-      return Response.json({ success: false, error: "Failed to fetch sheet data" }, { status: 500 });
-    }
-
-    const Productcsv = await generateData(uniqueSkus, GoogleData.data, console, context.env);
-
-    // Create CSV blob response
-    const csvBlob = new Blob([Productcsv.csv], { type: 'text/csv' });
-    
-    return new Response(csvBlob, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename="matrixify-import.csv"'
-      }
-    });
-
-  } catch (error) {
-    console.error("Failed in POST handler", { error });
-    return Response.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
-  }
-}
-
-// Parse the SKU input and remove duplicates
-
 //Get titles and subtitles
-function processTitle(title: string) {
+export function processTitle(title: string) {
 
 // Predefined lists
   const TYPES = [
@@ -134,7 +92,7 @@ function processTitle(title: string) {
 }
 
 // Replace content between <Description> tags with new content
-function replaceDescription(html: string, newContent: string): string {
+export function replaceDescription(html: string, newContent: string): string {
   if (!html) return html;
   
   // Find and replace content between <Description> and </Description> tags (case-insensitive)
@@ -148,7 +106,7 @@ function replaceDescription(html: string, newContent: string): string {
   return html;
 }
 
-async function fetchFirstProductDescription(filterUrl: string) {
+export async function fetchFirstProductDescription(filterUrl: string) {
   try {
     // 1. Fetch the filtered collection page
     const collectionResponse = await fetch(filterUrl);
@@ -191,7 +149,7 @@ async function fetchFirstProductDescription(filterUrl: string) {
   }
 }
 
-async function getContent(MainCollection:string,type:string, console: any, env: any) {
+export async function getContent(MainCollection:string,type:string, console: any, env: any) {
   
   if (MainCollection === "Irya") {
     MainCollection = "Irya Collection";
@@ -203,7 +161,7 @@ async function getContent(MainCollection:string,type:string, console: any, env: 
 
 }
 
-function isHomogeneous(csvData: string[][], console: Console, env: any): boolean {
+export function isHomogeneous(csvData: string[][], console: Console, env: any): boolean {
   // Check if we have at least 2 products (1 header + 2+ rows)
   if (csvData.length <= 2) {
     return true; // Single product or empty is trivially homogeneous
@@ -245,7 +203,7 @@ function isHomogeneous(csvData: string[][], console: Console, env: any): boolean
   return true; // All products matched
 }
 
-function jsonTo2DArray(jsonData: Record<string, string>[]): string[][] {
+export function jsonTo2DArray(jsonData: Record<string, string>[]): string[][] {
   if (!Array.isArray(jsonData) || jsonData.length === 0) return [];
 
   // Collect union of numeric-string keys across all rows
@@ -272,7 +230,7 @@ function jsonTo2DArray(jsonData: Record<string, string>[]): string[][] {
 }
 
  
-async function processData(sku: string, sheetData: string [][], env: any, ctx: any) 
+export async function processData(sku: string, sheetData: string [][], env: any, ctx: any) 
 {
 
 //adding title & seo
@@ -372,7 +330,7 @@ const finalProductType = (Type === "Ring") ? "Finger Ring" : Type;
   };
 }
 
-async function GetGoogleData(env:any) {
+export async function GetGoogleData(env:any) {
     const columnLetter = (index: number): string => {
     let letter = "";
     while (index >= 0) {
@@ -414,6 +372,7 @@ async function GetGoogleData(env:any) {
         data: null,
       };
     }
+
   
     const apiKey = env.GOOGLE_SHEETS_API_KEY;
     if (!apiKey) {
@@ -454,7 +413,7 @@ async function GetGoogleData(env:any) {
 
 
 //Main function 
-async function generateData(skus: string[],sheetJSON: Record<string, string>[], console: any, env: any) {
+export async function generateData(skus: string[],sheetJSON: Record<string, string>[], console: any, env: any) {
   const sheetData = jsonTo2DArray(sheetJSON);
 
   console.info({

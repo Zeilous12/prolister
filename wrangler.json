@@ -1,12 +1,19 @@
 {
-	"name": "prolister",
-	"compatibility_date": "2025-10-08",
-	"main": "./server.ts",
-	"assets": {
-		"directory": "./build/client"
-	},
-	"observability": {
-		"enabled": true
-	},
-	"upload_source_maps": true
+  "name": "prolister",
+  "compatibility_date": "2025-10-08",
+  "main": "./server.ts",
+  "assets": {
+    "directory": "./build/client"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "GOOGLE_SHEETS_API_KEY": "9036850052148c36fa71d4233743049b79a33b64"
+  },
+  "build": {
+    "command": "npm run build"
+  }
 }
