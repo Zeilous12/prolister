@@ -11,7 +11,7 @@
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "GOOGLE_SHEETS_API_KEY": "9036850052148c36fa71d4233743049b79a33b64"
+    "GOOGLE_SHEETS_API_KEY": "AIzaSyD6EtUEliqBGlu9U3Pk5xEdPz4c1_BVvdo"
   },
   "build": {
     "command": "npm run build"
