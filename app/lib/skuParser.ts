@@ -455,7 +455,7 @@ export async function generateData(skus: string[],sheetJSON: Record<string, stri
 
   }
   
-  const csv = csvData.map(row => row.join(',')).join('\n');
+  const csv = csvData.map(row => row.join(';')).join('\n');
 
 // Check homogeneity
 
