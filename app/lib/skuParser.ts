@@ -149,7 +149,7 @@ export async function fetchFirstProductDescription(filterUrl: string) {
   }
 }
 
-export async function getContent(MainCollection:string,type:string, console: any, env: any) {
+export async function getContent(MainCollection:string,type:string, env: any) {
   
   if (MainCollection === "Irya") {
     MainCollection = "Irya Collection";
@@ -161,7 +161,7 @@ export async function getContent(MainCollection:string,type:string, console: any
 
 }
 
-export function isHomogeneous(csvData: string[][], console: Console, env: any): boolean {
+export function isHomogeneous(csvData: string[][], env: any): boolean {
   // Check if we have at least 2 products (1 header + 2+ rows)
   if (csvData.length <= 2) {
     return true; // Single product or empty is trivially homogeneous
@@ -294,7 +294,7 @@ const Tags = ["NEW",Type,...subtypes,stoneColor,plating];
 const allTags = Tags.filter(Boolean) as string[];
 
 //adding description
-const Bodyhtml = await getContent(MainCollection,Type,env,ctx);
+const Bodyhtml = await getContent(MainCollection,Type,env);
 console.info({ 
   sku, 
   BodyhtmlLength: Bodyhtml?.length || 0, 
@@ -413,7 +413,7 @@ export async function GetGoogleData(env:any) {
 
 
 //Main function 
-export async function generateData(skus: string[],sheetJSON: Record<string, string>[], console: any, env: any) {
+export async function generateData(skus: string[],sheetJSON: Record<string, string>[], env: any) {
   const sheetData = jsonTo2DArray(sheetJSON);
 
   console.info({
@@ -459,7 +459,7 @@ export async function generateData(skus: string[],sheetJSON: Record<string, stri
 
 // Check homogeneity
 
-  const homogeneous = isHomogeneous(csvData, console, env); 
+  const homogeneous = isHomogeneous(csvData, env); 
   return { 
   csv : csv,
   homogeneous: homogeneous  // true if all same collections, false if mixed

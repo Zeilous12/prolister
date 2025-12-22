@@ -74,7 +74,7 @@ export const action: ActionFunction = async ({ request, context }) => {
     }
 
     // 3. Generate CSV
-    const Productcsv = await generateData(uniqueSkus, GoogleData.data, env, console);
+    const Productcsv = await generateData(uniqueSkus, GoogleData.data, env);
 
     // 4. Return CSV
     return new Response(Productcsv.csv, {
