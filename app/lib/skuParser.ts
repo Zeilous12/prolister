@@ -1,5 +1,4 @@
-import * as cheerio from 'cheerio';
-
+import { JSDOM } from 'jsdom';
 //Get titles and subtitles
 export function processTitle(title: string) {
 
@@ -91,7 +90,6 @@ export function processTitle(title: string) {
 
 }
 
-<<<<<<< HEAD
 // Replace content between <Description> tags with new content
 export function replaceDescription(html: string, newContent: string): string {
   if (!html) return html;
@@ -107,104 +105,119 @@ export function replaceDescription(html: string, newContent: string): string {
   return html;
 }
 
-export async function fetchFirstProductDescription(filterUrl: string) {
+export async function fetchFirstProductDetailsHTML(
+  filterUrl: string, fallbackUrl: string
+): Promise<string> {
   try {
-    // 1. Fetch the filtered collection page
-    const collectionResponse = await fetch(filterUrl);
-    const collectionHtml = await collectionResponse.text();
-    const $ = cheerio.load(collectionHtml);
-    
-    // 2. Find the first product link
-    // Common selectors (adjust for your site):
-    const firstProductLink = $('a[href*="/products/"]').first().attr('href');
-    // OR: $('.product-card a').first().attr('href');
-    // OR: $('[data-product-handle]').first().attr('data-product-handle');
-    
-    if (!firstProductLink) {
-      return 'No products found';
+    /* -------------------------
+       1. Fetch filtered page
+    -------------------------- */
+    let collectionHtml = "";
+     collectionHtml = await fetch(filterUrl).then(r => r.text());
+    if(!collectionHtml){
+      collectionHtml = await fetch(fallbackUrl).then(r => r.text());
     }
-    
-    // 3. Construct full product URL
-    const productUrl = firstProductLink.startsWith('http') 
-      ? firstProductLink 
-      : `https://paksha.com${firstProductLink}`;
-    
-    // 4. Fetch the product page
-    const productResponse = await fetch(productUrl);
-    const productHtml = await productResponse.text();
-    const $$ = cheerio.load(productHtml);
-    
-    // 5. Extract description
-    // Common description locations:
-    const description = 
-      $$('.product-description').text().trim() ||
-      $$('[data-product-description]').text().trim() ||
-      $$('meta[property="og:description"]').attr('content') ||
-      'No description found';
-    
-    return description;
-    
+    const collectionDom = new JSDOM(collectionHtml);
+    const collectionDoc = collectionDom.window.document;
+
+    /* -------------------------
+       2. Find first product link
+    -------------------------- */
+    const productAnchor = Array.from(
+      collectionDoc.querySelectorAll('a[href*="/products/"]')
+    )[0] as HTMLAnchorElement | undefined;
+
+    if (!productAnchor?.href) {
+      return 'No products found in this filter';
+    }
+
+    /* -------------------------
+       3. Normalize product URL
+    -------------------------- */
+    const productUrl = productAnchor.href.startsWith('http')
+      ? productAnchor.href
+      : new URL(productAnchor.href, filterUrl).toString();
+
+    /* -------------------------
+       4. Fetch product page
+    -------------------------- */
+    const productHtml = await fetch(productUrl).then(r => r.text());
+    const productDom = new JSDOM(productHtml);
+    const productDoc = productDom.window.document;
+
+    /* -------------------------
+       5. Extract Product Details
+    -------------------------- */
+    const tabs = productDoc.querySelectorAll('details.collapsible-tab');
+
+    for (const tab of tabs) {
+      const heading = tab.querySelector('summary span')?.textContent?.trim();
+
+      if (heading === 'Product Details') {
+        const content = tab.querySelector('.collapsible-tab__text');
+        if (!content) return 'Product details not found';
+
+        content
+          .querySelectorAll('[style*="display: none"]')
+          .forEach(el => el.remove());
+
+        return content.innerHTML.trim();
+      }
+    }
+
+    return 'Product details section not found';
   } catch (error) {
-    console.error('Failed to fetch product:', error);
+    console.error('Failed to fetch first product details:', error);
     return 'Description unavailable';
   }
 }
 
-export async function getContent(MainCollection:string,type:string, env: any) {
+export async function getContent(MainCollection:string,type:string) {
+
+  MainCollection = MainCollection.toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')        // Replace spaces with hyphens
+    .replace(/[^a-z0-9-]/g, '')  // Remove special characters
+    .replace(/^-+|-+$/g, '');
   
   if (MainCollection === "Irya") {
-    MainCollection = "Irya Collection";
+    MainCollection = "irya-collection";
+  } else if (MainCollection === "Tyarra") {
+    MainCollection = "tyarra-collection";
+  } else if (MainCollection === "Nakshatra") {
+    MainCollection = "nakshatra-collection";
+  } else if (MainCollection === "Mangalsutra") {
+    MainCollection = "mangalsutra-collection";
   }
-  MainCollection = MainCollection.trim()? MainCollection.replace(/\s+/g, '+'): MainCollection;
-  const filterUrl = "https://paksha.com/collections/tyarra-collection/products/lunea-cz-silver-pendant-necklace";
-  const description = await fetchFirstProductDescription(filterUrl);
-  return description;
+    type = type.trim()
+    .replace(/\s+/g, '-')        // Replace spaces with hyphens
+    .replace(/[^a-z0-9-]/g, '')  // Remove special characters
+    .replace(/^-+|-+$/g, '');
 
-}
+    if (type === "Bangles") {
+      type = "Bangle";
+    } else if (type === "Necklaces") {
+      type = "Necklace";
+    } else if (type === "Anklets") {
+      type = "Anklet";
+    } else if (type === "Watch Charms") {
+      type = "Watch Charm";
+    } 
+    const weburl = `https://paksha.com/`;
+    const mainurl = `https://paksha.com/collections/${MainCollection}`; 
+  const filterUrl = `https://paksha.com/collections/${MainCollection}?filter.p.m.custom.product_types=${type}`;
 
-=======
->>>>>>> baec005 (Removed Description, added simple content.)
-export function isHomogeneous(csvData: string[][], env: any): boolean {
-  // Check if we have at least 2 products (1 header + 2+ rows)
-  if (csvData.length <= 2) {
-    return true; // Single product or empty is trivially homogeneous
-  }
-  
-  const headers = csvData[0];
-  const typeIndex = headers.indexOf("Type");
-  const collectionsIndex = headers.indexOf("Collections");
-  
-  // If required columns don't exist
-  if (typeIndex === -1 || collectionsIndex === -1) {
-    return false; // Can't determine homogeneity
-  }
-  
-  let firstType: string | null = null;
-  let firstCollection: string | null = null;
-  
-  // Start from row 1 (skip header)
-  for (let i = 1; i < csvData.length; i++) {
-    const row = csvData[i];
-    const currentType = row[typeIndex]?.trim();
-    const currentCollections = row[collectionsIndex]?.trim();
-    
-    // Extract first collection (before comma if multiple)
-    const firstCurrentCollection = currentCollections?.split(',')[0]?.trim();
-    
-    if (i === 1) {
-      // First product - set reference values
-      firstType = currentType;
-      firstCollection = firstCurrentCollection;
-    } else {
-      // Compare with first product
-      if (currentType !== firstType || firstCurrentCollection !== firstCollection) {
-        return false;
+    let description = "";
+    if (type === "Hair Accessories" || type === "Bridal Set" || type === "Nose Pin" || type === "Waist Band" || type === "Armlet" || type === "Nose Ring" || type === "Nose Pin") {
+        description = await fetchFirstProductDetailsHTML(mainurl,weburl);
       }
+    else {
+      description = await fetchFirstProductDetailsHTML(filterUrl,mainurl);
     }
-  }
-  
-  return true; // All products matched
+    
+    return description;
 }
+
 
 export function jsonTo2DArray(jsonData: Record<string, string>[]): string[][] {
   if (!Array.isArray(jsonData) || jsonData.length === 0) return [];
@@ -297,20 +310,15 @@ const Tags = ["NEW",Type,...subtypes,stoneColor,plating];
 const allTags = Tags.filter(Boolean) as string[];
 
 //adding description
-const Bodyhtml = sheetData.find(row => row[7] === sku)?.[10] ??  "No description available";
-console.info({ 
+const webhtml = await getContent(MainCollection,Type) || "No description available";
+const sheetcontent = sheetData.find(row => row[7] === sku)?.[10] || "";
+const Bodyhtml = replaceDescription(webhtml, sheetcontent);
+console.info({
   sku, 
   BodyhtmlLength: Bodyhtml?.length || 0, 
   BodyhtmlPreview: Bodyhtml?.substring(0, 100) || "empty" 
 }, "DEBUG: Bodyhtml from getContent");
 
-const description = sheetData.find(row => row[7] === sku)?.[10] ?? "Not found";
-console.info({ 
-  sku, 
-  description, 
-  descriptionLength: description?.length || 0 
-}, "DEBUG: Description from sheet");
- 
 const finalProductType = (Type === "Ring") ? "Finger Ring" : Type;
 
   return {
@@ -452,9 +460,7 @@ export async function generateData(skus: string[],sheetJSON: Record<string, stri
 
 // Check homogeneity
 
-  const homogeneous = isHomogeneous(csvData, env); 
   return { 
   csv : csv,
-  homogeneous: homogeneous  // true if all same collections, false if mixed
   };
 }
