@@ -91,6 +91,79 @@ export function processTitle(title: string) {
 
 }
 
+<<<<<<< HEAD
+// Replace content between <Description> tags with new content
+export function replaceDescription(html: string, newContent: string): string {
+  if (!html) return html;
+  
+  // Find and replace content between <Description> and </Description> tags (case-insensitive)
+  const descriptionRegex = /(<Description[^>]*>)([\s\S]*?)(<\/Description>)/i;
+  
+  if (html.match(descriptionRegex)) {
+    // Replace the content between the tags, keeping the tags themselves
+    return html.replace(descriptionRegex, `$1${newContent}$3`);
+  }
+    // If no Description tags found, return original HTML unchanged
+  return html;
+}
+
+export async function fetchFirstProductDescription(filterUrl: string) {
+  try {
+    // 1. Fetch the filtered collection page
+    const collectionResponse = await fetch(filterUrl);
+    const collectionHtml = await collectionResponse.text();
+    const $ = cheerio.load(collectionHtml);
+    
+    // 2. Find the first product link
+    // Common selectors (adjust for your site):
+    const firstProductLink = $('a[href*="/products/"]').first().attr('href');
+    // OR: $('.product-card a').first().attr('href');
+    // OR: $('[data-product-handle]').first().attr('data-product-handle');
+    
+    if (!firstProductLink) {
+      return 'No products found';
+    }
+    
+    // 3. Construct full product URL
+    const productUrl = firstProductLink.startsWith('http') 
+      ? firstProductLink 
+      : `https://paksha.com${firstProductLink}`;
+    
+    // 4. Fetch the product page
+    const productResponse = await fetch(productUrl);
+    const productHtml = await productResponse.text();
+    const $$ = cheerio.load(productHtml);
+    
+    // 5. Extract description
+    // Common description locations:
+    const description = 
+      $$('.product-description').text().trim() ||
+      $$('[data-product-description]').text().trim() ||
+      $$('meta[property="og:description"]').attr('content') ||
+      'No description found';
+    
+    return description;
+    
+  } catch (error) {
+    console.error('Failed to fetch product:', error);
+    return 'Description unavailable';
+  }
+}
+
+export async function getContent(MainCollection:string,type:string, env: any) {
+  
+  if (MainCollection === "Irya") {
+    MainCollection = "Irya Collection";
+  }
+  MainCollection = MainCollection.trim()? MainCollection.replace(/\s+/g, '+'): MainCollection;
+  const filterUrl = "https://paksha.com/collections/tyarra-collection/products/lunea-cz-silver-pendant-necklace";
+  const description = await fetchFirstProductDescription(filterUrl);
+  return description;
+
+}
+
+=======
+>>>>>>> baec005 (Removed Description, added simple content.)
 export function isHomogeneous(csvData: string[][], env: any): boolean {
   // Check if we have at least 2 products (1 header + 2+ rows)
   if (csvData.length <= 2) {
