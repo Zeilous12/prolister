@@ -159,9 +159,8 @@ function escapeHtml(text: string): string {
 
   // if (html.match(descriptionRegex)) {
     // return html.replace(descriptionRegex, `$1${newContent}$3`);
-  }
+  
   // return html;
-}
 
 export async function fetchFirstProductDetailsHTML(
   filterUrl: string,
