@@ -1,4 +1,5 @@
-import { JSDOM } from 'jsdom';
+import { parseHTML } from 'linkedom';
+
 //Get titles and subtitles
 export function processTitle(title: string) {
 
@@ -90,60 +91,75 @@ export function processTitle(title: string) {
 
 }
 
-// Replace content between <Description> tags with new content
+/* ----------------------------------
+----------------------------------- */
 export function replaceDescription(html: string, newContent: string): string {
   if (!html) return html;
-  
-  // Find and replace content between <Description> and </Description> tags (case-insensitive)
-  const descriptionRegex = /(<Description[^>]*>)([\s\S]*?)(<\/Description>)/i;
-  
+
+  const descriptionRegex =
+    /(<Description[^>]*>)([\s\S]*?)(<\/Description>)/i;
+
   if (html.match(descriptionRegex)) {
-    // Replace the content between the tags, keeping the tags themselves
     return html.replace(descriptionRegex, `$1${newContent}$3`);
   }
-    // If no Description tags found, return original HTML unchanged
   return html;
 }
 
+/* ----------------------------------
+   LINKEDOM VERSION (Worker-safe)
+----------------------------------- */
 export async function fetchFirstProductDetailsHTML(
-  filterUrl: string, fallbackUrl: string
+  filterUrl: string,
+  fallbackUrl: string
 ): Promise<string> {
   try {
     /* -------------------------
-       1. Fetch filtered page
+       1. Fetch collection page
     -------------------------- */
-    let collectionHtml = "";
-     collectionHtml = await fetch(filterUrl).then(r => r.text());
-    if(!collectionHtml){
-      collectionHtml = await fetch(fallbackUrl).then(r => r.text());
+    let collectionHtml: string | null = null;
+    let baseUrl = filterUrl;
+
+    const filterRes = await fetch(filterUrl);
+    if (filterRes.ok) {
+      collectionHtml = await filterRes.text();
+    } else {
+      const fallbackRes = await fetch(fallbackUrl);
+      if (!fallbackRes.ok) {
+        return 'Failed to fetch both URLs';
+      }
+      collectionHtml = await fallbackRes.text();
+      baseUrl = fallbackUrl;
     }
-    const collectionDom = new JSDOM(collectionHtml);
-    const collectionDoc = collectionDom.window.document;
+
+    const { document: collectionDoc } = parseHTML(collectionHtml);
 
     /* -------------------------
        2. Find first product link
     -------------------------- */
-    const productAnchor = Array.from(
-      collectionDoc.querySelectorAll('a[href*="/products/"]')
-    )[0] as HTMLAnchorElement | undefined;
+    const productAnchor = collectionDoc.querySelector(
+      'a[href*="/products/"]'
+    ) as HTMLAnchorElement | null;
 
-    if (!productAnchor?.href) {
+    if (!productAnchor?.getAttribute('href')) {
       return 'No products found in this filter';
     }
 
     /* -------------------------
        3. Normalize product URL
     -------------------------- */
-    const productUrl = productAnchor.href.startsWith('http')
-      ? productAnchor.href
-      : new URL(productAnchor.href, filterUrl).toString();
+    const href = productAnchor.getAttribute('href')!;
+    const productUrl = href.startsWith('http')
+      ? href
+      : new URL(href, baseUrl).toString();
 
     /* -------------------------
        4. Fetch product page
     -------------------------- */
-    const productHtml = await fetch(productUrl).then(r => r.text());
-    const productDom = new JSDOM(productHtml);
-    const productDoc = productDom.window.document;
+    const productRes = await fetch(productUrl);
+    if (!productRes.ok) return 'Failed to fetch product page';
+
+    const productHtml = await productRes.text();
+    const { document: productDoc } = parseHTML(productHtml);
 
     /* -------------------------
        5. Extract Product Details
@@ -151,12 +167,18 @@ export async function fetchFirstProductDetailsHTML(
     const tabs = productDoc.querySelectorAll('details.collapsible-tab');
 
     for (const tab of tabs) {
-      const heading = tab.querySelector('summary span')?.textContent?.trim();
+      const heading = tab
+        .querySelector('summary span')
+        ?.textContent?.trim();
 
       if (heading === 'Product Details') {
-        const content = tab.querySelector('.collapsible-tab__text');
+        const content = tab.querySelector(
+          '.collapsible-tab__text'
+        ) as HTMLElement | null;
+
         if (!content) return 'Product details not found';
 
+        // Remove hidden junk
         content
           .querySelectorAll('[style*="display: none"]')
           .forEach(el => el.remove());
