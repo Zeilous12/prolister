@@ -125,7 +125,7 @@ export async function fetchFirstProductDetailsHTML(
     } else {
       const fallbackRes = await fetch(fallbackUrl);
       if (!fallbackRes.ok) {
-        return 'Failed to fetch both URLs';
+        return `The filter URL is ${filterUrl} and the fallback URL is ${fallbackUrl}`;
       }
       collectionHtml = await fallbackRes.text();
       baseUrl = fallbackUrl;
