@@ -91,31 +91,86 @@ export function processTitle(title: string) {
 
 }
 
-/* ----------------------------------
------------------------------------ */
-export function replaceDescription(html: string, newContent: string): string {
-  if (!html) return html;
+export function formatProductDetailsHTML(
+  rawHtml: string,
+  descriptionText: string
+): string {
+  if (!rawHtml) return '';
 
-  const descriptionRegex =
-    /(<Description[^>]*>)([\s\S]*?)(<\/Description>)/i;
+  // Normalize line endings
+  const html = rawHtml.replace(/\r/g, '');
 
-  if (html.match(descriptionRegex)) {
-    return html.replace(descriptionRegex, `$1${newContent}$3`);
-  }
-  return html;
+   //  1. Extract Product Information
+  const markerIndex = html.search(/Product Information/i);
+  if (markerIndex === -1) return '';
+
+  const sliced = html.slice(markerIndex);
+
+  const productInfoMatch = sliced.match(
+    /(Product Information[\s\S]*?<ul[\s\S]*?<\/ul>)/i
+  );
+
+  if (!productInfoMatch) return '';
+
+  let productInfoHtml = productInfoMatch[1];
+
+
+    // 2. Clean junk attributes
+  productInfoHtml = productInfoHtml
+    .replace(/\sdata-mce-[^=]+="[^"]*"/gi, '')
+    .replace(/<span>\s*<\/span>/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+     //3. Build Description block
+  const descriptionBlock = `
+<strong>Description</strong>
+<p>${escapeHtml(descriptionText)}</p>
+`.trim();
+
+    // 4. Normalize Product Information heading
+  
+  productInfoHtml = productInfoHtml.replace(
+    /Product Information/i,
+    '<strong>Product Information</strong>'
+  );
+
+    // 5. Combine blocks
+  return `${descriptionBlock}\n\n${productInfoHtml}`;
 }
 
-/* ----------------------------------
-   LINKEDOM VERSION (Worker-safe)
------------------------------------ */
+//   Safe HTML escaping for description
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+
+//export function replaceDescription(html: string, newContent: string): string {
+  // if (!html) return html;
+
+  // const descriptionRegex =
+    //(<Description[^>]*>)([\s\S]*?)(<\/Description>)/i;
+
+  // if (html.match(descriptionRegex)) {
+    // return html.replace(descriptionRegex, `$1${newContent}$3`);
+  }
+  // return html;
+}
+
 export async function fetchFirstProductDetailsHTML(
   filterUrl: string,
   fallbackUrl: string
 ): Promise<string> {
   try {
-    /* -------------------------
-       1. Fetch collection page
-    -------------------------- */
+    
+       // Fetch collection page
+    
     let collectionHtml: string | null = null;
     let baseUrl = filterUrl;
 
@@ -153,9 +208,9 @@ export async function fetchFirstProductDetailsHTML(
 
     const { document: collectionDoc } = parseHTML(collectionHtml);
 
-    /* -------------------------
-       2. Find first product link
-    -------------------------- */
+   
+       //2. Find first product link
+  
     const productAnchor = collectionDoc.querySelector(
       'a[href*="/products/"]'
     ) as HTMLAnchorElement | null;
@@ -164,17 +219,14 @@ export async function fetchFirstProductDetailsHTML(
       return 'No products found in this filter';
     }
 
-    /* -------------------------
-       3. Normalize product URL
-    -------------------------- */
+       //3. Normalize product URL
+  
     const href = productAnchor.getAttribute('href')!;
     const productUrl = href.startsWith('http')
       ? href
       : new URL(href, baseUrl).toString();
 
-    /* -------------------------
-       4. Fetch product page
-    -------------------------- */
+       // 4. Fetch product page
     const productRes = await fetch(productUrl, {
     headers: {
       "User-Agent":
@@ -191,9 +243,8 @@ export async function fetchFirstProductDetailsHTML(
     const productHtml = await productRes.text();
     const { document: productDoc } = parseHTML(productHtml);
 
-    /* -------------------------
-       5. Extract Product Details
-    -------------------------- */
+      // 5. Extract Product Details
+     
     const tabs = productDoc.querySelectorAll('details.collapsible-tab');
 
     for (const tab of tabs) {
@@ -242,9 +293,7 @@ export async function getContent(MainCollection:string,type:string) {
     MainCollection = "mangalsutra-collection";
   }
     type = type.trim()
-    .replace(/\s+/g, '-')        // Replace spaces with hyphens
-    .replace(/[^a-z0-9-]/g, '')  // Remove special characters
-    .replace(/^-+|-+$/g, '');
+    .replace(/\s+/g, '-')        // Replace spaces with hyphens 
 
     if (type === "Bangles") {
       type = "Bangle";
@@ -364,7 +413,7 @@ const allTags = Tags.filter(Boolean) as string[];
 //adding description
 const webhtml = await getContent(MainCollection,Type) || "No description available";
 const sheetcontent = sheetData.find(row => row[7] === sku)?.[10] || "";
-const Bodyhtml = replaceDescription(webhtml, sheetcontent);
+const Bodyhtml = formatProductDetailsHTML(webhtml, sheetcontent);
 console.info({
   sku, 
   BodyhtmlLength: Bodyhtml?.length || 0, 
