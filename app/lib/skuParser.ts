@@ -202,13 +202,13 @@ export async function getContent(MainCollection:string,type:string) {
     .replace(/[^a-z0-9-]/g, '')  // Remove special characters
     .replace(/^-+|-+$/g, '');
   
-  if (MainCollection === "Irya") {
+  if (MainCollection === "irya") {
     MainCollection = "irya-collection";
-  } else if (MainCollection === "Tyarra") {
+  } else if (MainCollection === "tyarra") {
     MainCollection = "tyarra-collection";
-  } else if (MainCollection === "Nakshatra") {
+  } else if (MainCollection === "nakshatra") {
     MainCollection = "nakshatra-collection";
-  } else if (MainCollection === "Mangalsutra") {
+  } else if (MainCollection === "mangalsutra") {
     MainCollection = "mangalsutra-collection";
   }
     type = type.trim()
