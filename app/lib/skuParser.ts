@@ -1,5 +1,68 @@
 import { parseHTML } from 'linkedom';
 
+//Main function 
+export async function generateData(skus: string[],sheetJSON: Record<string, string>[], env: any) {
+  const sheetData = jsonTo2DArray(sheetJSON);
+  
+  /*This is the main function that loops through SKU passed from the Front End and calls processData
+   function to generate data based on creteria's together with data fetched from Google Sheets for 
+   each product and their respective field
+   
+   Features
+   1. Simple yet robust.
+   2. Fail save.
+   3. No Shopify storeFront required
+   4. HTML formatted to perfectly rendered by Excel/libreOffice/Shopify
+   5. Product description fetched from store website based on last similar product.
+    */  
+  console.info({
+  sheetDataExists: !!sheetData,
+  sheetDataLength: sheetData?.length || 0,
+  firstRowSample: sheetData?.[0] || null,
+  skuListProvided: skus
+        }, "DEBUG: Data state before processing");
+  console.info({ rowCount: sheetData.length }, "Successfully fetched sheet data");
+    const headers = [
+    "Title", "Body HTML", "Vendor", "Type", 
+    "Tags", "Status", "Custom Collections", "SEO Title"
+  ];
+
+  // 2. 2D array with headers as first row
+  const csvData: string[][] = [headers];
+  
+    for (const [index, sku] of skus.entries()) {
+    try {    
+      // Generate data for this SKU
+      const skuData = await processData(sku,sheetData, env, null);
+      
+      const row: string[] = [
+        //  required fields
+        skuData.title,
+        skuData.content,
+        "SILVER",
+        skuData.productType,
+        skuData.tags.join(","),
+        "Draft", 
+        skuData.collections.join(",") ,
+        skuData.seotitle,
+      ];
+      csvData.push(row);
+      }
+       catch (error) {
+      console.error({ error, sku }, "Failed to process SKU");
+    }
+
+  }
+  
+  const csv = csvData.map(row => row.join(';')).join('\n');
+
+// Check homogeneity
+
+  return { 
+  csv : csv,
+  };
+}
+
 //Get titles and subtitles
 export function processTitle(title: string) {
 
@@ -140,7 +203,7 @@ export function formatProductDetailsHTML(
   return `${descriptionBlock}\n\n${productInfoHtml}\n\n${producturl}`;
 }
 
-//   Safe HTML escaping for description
+//   HTML escaping for description
 
 function escapeHtml(text: string): string {
   return text
@@ -187,6 +250,7 @@ export async function fetchFirstProductDetailsHTML(
   });
     if (filterRes.ok) {
       collectionHtml = await filterRes.text();
+      console.info("Fetched collection page from filter URL");
     } else {
       const fallbackRes = await fetch(fallbackUrl, {
     headers: {
@@ -209,25 +273,25 @@ export async function fetchFirstProductDetailsHTML(
     const { document: collectionDoc } = parseHTML(collectionHtml);
 
    
-       //2. Find first product link
+       //Find first product link
   
-    const productAnchor = collectionDoc.querySelector(
-      'a[href*="/products/"]'
-    ) as HTMLAnchorElement | null;
+    const productAnchor = Array.from(
+      collectionDoc.querySelectorAll('a[href*="/products/"]')
+    ).find(a => !a.closest('p')) as HTMLAnchorElement | undefined;
 
     if (!productAnchor?.getAttribute('href')) {
       return { html: 'No products  in this filter', productUrl: null };
 
     }
 
-       //3. Normalize product URL
+       // Normalize product URL
   
     const href = productAnchor.getAttribute('href')!;
     const productUrl = href.startsWith('http')
       ? href
       : new URL(href, baseUrl).toString();
 
-       // 4. Fetch product page
+       //  Fetch product page
     const productRes = await fetch(productUrl, {
     headers: {
       "User-Agent":
@@ -244,7 +308,7 @@ export async function fetchFirstProductDetailsHTML(
     const productHtml = await productRes.text();
     const { document: productDoc } = parseHTML(productHtml);
 
-      // 5. Extract Product Details
+      //  Extract Product Details
      
     const tabs = productDoc.querySelectorAll('details.collapsible-tab');
 
@@ -308,6 +372,7 @@ export async function getContent(MainCollection:string,type:string) {
     const weburl = `https://paksha.com/`;
     const mainurl = `https://paksha.com/collections/${MainCollection}`; 
   const filterUrl = `https://paksha.com/collections/${MainCollection}?filter.p.m.custom.product_types=${type}`;
+  console.info({ filterUrl, mainurl, type,MainCollection }, "DEBUG: URLs constructed for fetching content");
 
   let description = "";
   let productUrl = "";
@@ -359,7 +424,7 @@ export async function processData(sku: string, sheetData: string [][], env: any,
 
 //adding title & seo
 const title = sheetData.find(row => row[7] === sku)?.[9] ?? "Not found";
-const seotitle = `Discover ${title} | Paksha`;
+const seotitle = `"Discover ${title} | Paksha"`;
 
 //adding type
 const Type = String(processTitle(title).type || "").trim();
@@ -452,7 +517,7 @@ export async function GetGoogleData(env:any) {
   };
   type SheetData = Record<string, string>;
 
-  // Convert 2D array (rows) -> JSON with A,B,C... keys
+  // Convert 2D array (rows) to JSON with 1,2,3... Headers
   const rowsToColumnJSON = (rows: string[][]): SheetData[] => {
     if (!rows || rows.length <= 1) return [];
 
@@ -507,7 +572,7 @@ export async function GetGoogleData(env:any) {
     const data = (await response.json()) as { values?: string[][] };
     const rows = data.values || [];
 
-    //  Convert rows → JSON with alphabet keys
+    //  Convert rows to JSON with newmeric keys
     const alphabetJSON = rowsToColumnJSON(rows);
 
     return {
@@ -523,54 +588,3 @@ export async function GetGoogleData(env:any) {
 }
 
 
-//Main function 
-export async function generateData(skus: string[],sheetJSON: Record<string, string>[], env: any) {
-  const sheetData = jsonTo2DArray(sheetJSON);
-
-  console.info({
-  sheetDataExists: !!sheetData,
-  sheetDataLength: sheetData?.length || 0,
-  firstRowSample: sheetData?.[0] || null,
-  skuListProvided: skus
-        }, "DEBUG: Data state before processing");
-  console.info({ rowCount: sheetData.length }, "Successfully fetched sheet data");
-    const headers = [
-    "Title", "Body HTML", "Vendor", "Type", 
-    "Tags", "Status", "Custom Collections", "SEO Title"
-  ];
-
-  // 2. 2D array with headers as first row
-  const csvData: string[][] = [headers];
-  
-    for (const [index, sku] of skus.entries()) {
-    try {    
-      // Generate data for this SKU
-      const skuData = await processData(sku,sheetData, env, null);
-      
-      const row: string[] = [
-        //  required fields
-        skuData.title,
-        skuData.content,
-        "SILVER",
-        skuData.productType,
-        skuData.tags.join(","),
-        "Draft", 
-        skuData.collections.join(",") ,
-        skuData.seotitle,
-      ];
-      csvData.push(row);
-      }
-       catch (error) {
-      console.error({ error, sku }, "Failed to process SKU");
-    }
-
-  }
-  
-  const csv = csvData.map(row => row.join(';')).join('\n');
-
-// Check homogeneity
-
-  return { 
-  csv : csv,
-  };
-}

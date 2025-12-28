@@ -8,7 +8,7 @@ declare global {
 }
 export const action: ActionFunction = async ({ request, context }) => {
   try {
-    // CORRECT: Access env through context.cloudflare.env
+    // Access env through context.cloudflare.env
     const env = context.cloudflare.env as { GOOGLE_SHEETS_API_KEY: string };
     const apiKey = env.GOOGLE_SHEETS_API_KEY;
     
@@ -81,7 +81,7 @@ export const action: ActionFunction = async ({ request, context }) => {
       status: 200,
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename="matrixify-import.csv"',
+        'Content-Disposition': 'attachment; filename="Shopify-matrixify-import.csv"',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'

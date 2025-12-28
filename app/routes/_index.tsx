@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import type { MetaFunction } from "@remix-run/cloudflare";
 export const meta: MetaFunction = () => {
@@ -25,7 +24,7 @@ export default function Home() {
 
   // UI Helper Components
   const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
+  <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
       {children}
     </div>
   );
@@ -142,9 +141,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4 md:p-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Product Listing</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Product Listing</h1>
 
         {/* Error Display */}
         {error && (
@@ -178,7 +177,7 @@ export default function Home() {
                       href="https://www.linkedin.com/in/zubair-baig60/"
                       className="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition text-center"
                     >
-                      Learn more
+                      About
                     </a>
                   </div>
                 </div>
@@ -202,12 +201,12 @@ export default function Home() {
                       setSku(e.target.value);
                       setError(null);
                     }}
-                    placeholder="Enter one SKU per line, or separate with commas"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter one SKU per line or separate with commas"
+                    className="w-full px-3 py-2 border border-white rounded-md focus:ring-blue-500 focus:border-blue-500"
                     rows={5}
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Multiple SKUs allowed. Separate with new lines, commas, or spaces.
+                    Supports direct past from Excel.
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -215,14 +214,14 @@ export default function Home() {
                     onClick={handleSkuSubmit}
                     className="px-4 py-2 bg-gray-900 text-white font-medium rounded-md hover:bg-blue-700 transition"
                   >
-                    Generate CSV
+                    Generate data
                   </button>
                   <button
                     onClick={() => {
                       setShowForm(false);
                       setError(null);
                     }}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition"
+                    className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-white transition"
                   >
                     Cancel
                   </button>
@@ -242,7 +241,7 @@ export default function Home() {
                   Processing {detectedType === 'single' ? 'single SKU' : 'multiple SKUs'}
                 </p>
                 <p className="text-sm text-gray-500">
-                  This may take a moment while we fetch data...
+                  ...This may take a moment...
                 </p>
               </div>
             </Card>
@@ -255,10 +254,10 @@ export default function Home() {
             <Card className="p-6">
               <div className="text-center space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  CSV Generated Successfully!
+                  Data Generated Successfully
                 </h3>
                 <p className="text-gray-600">
-                  Your Shopify CSV file is ready for download.
+                  Your file is ready for download.
                 </p>
                 <div className="flex gap-3 justify-center">
                   <button
@@ -285,10 +284,10 @@ export default function Home() {
             <Card className="p-6">
               <div className="text-center space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  CSV Downloaded Successfully!
+                  Data Downloaded Successfully!
                 </h3>
                 <p className="text-gray-600">
-                  Your Matrixify import file has been downloaded.
+                  Your Product import file has been downloaded.
                 </p>
                 <div className="flex gap-3 justify-center">
                   <button
