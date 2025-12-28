@@ -93,7 +93,8 @@ export function processTitle(title: string) {
 
 export function formatProductDetailsHTML(
   rawHtml: string,
-  descriptionText: string
+  descriptionText: string,
+  producturl:string
 ): string {
   if (!rawHtml) return '';
 
@@ -136,7 +137,7 @@ export function formatProductDetailsHTML(
   );
 
     // 5. Combine blocks
-  return `${descriptionBlock}\n\n${productInfoHtml}`;
+  return `${descriptionBlock}\n\n${productInfoHtml}\n\n${producturl}`;
 }
 
 //   Safe HTML escaping for description
@@ -151,16 +152,7 @@ function escapeHtml(text: string): string {
 }
 
 
-//export function replaceDescription(html: string, newContent: string): string {
-  // if (!html) return html;
 
-  // const descriptionRegex =
-    //(<Description[^>]*>)([\s\S]*?)(<\/Description>)/i;
-
-  // if (html.match(descriptionRegex)) {
-    // return html.replace(descriptionRegex, `$1${newContent}$3`);
-  
-  // return html;
 function csvLiteralCell(html: string): string {
   return `"${html
     .replace(/\r?\n/g, ' ')     // replace linebreaks with space
@@ -174,7 +166,7 @@ function csvLiteralCell(html: string): string {
 export async function fetchFirstProductDetailsHTML(
   filterUrl: string,
   fallbackUrl: string
-): Promise<string> {
+): Promise<{ html: string; productUrl: string | null }> {
   try {
     
        // Fetch collection page
@@ -208,7 +200,7 @@ export async function fetchFirstProductDetailsHTML(
     }
   });
       if (!fallbackRes.ok) {
-        return `The filter URL is ${filterUrl} and the fallback URL is ${fallbackUrl}`;
+        return { html: `The filter URL is ${filterUrl} and the fallback URL is ${fallbackUrl}`, productUrl: null };
       }
       collectionHtml = await fallbackRes.text();
       baseUrl = fallbackUrl;
@@ -224,7 +216,8 @@ export async function fetchFirstProductDetailsHTML(
     ) as HTMLAnchorElement | null;
 
     if (!productAnchor?.getAttribute('href')) {
-      return 'No products found in this filter';
+      return { html: 'No products  in this filter', productUrl: null };
+
     }
 
        //3. Normalize product URL
@@ -246,7 +239,7 @@ export async function fetchFirstProductDetailsHTML(
       "Referer": "https://www.google.com/",
     }
   });
-    if (!productRes.ok) return 'Failed to fetch product page';
+    if (!productRes.ok) return { html: 'No products page', productUrl: null };
 
     const productHtml = await productRes.text();
     const { document: productDoc } = parseHTML(productHtml);
@@ -265,21 +258,21 @@ export async function fetchFirstProductDetailsHTML(
           '.collapsible-tab__text'
         ) as HTMLElement | null;
 
-        if (!content) return 'Product details not found';
+        if (!content) return { html: 'Failed to fetch product details',productUrl: productUrl};
 
         // Remove hidden junk
         content
           .querySelectorAll('[style*="display: none"]')
           .forEach(el => el.remove());
 
-        return content.innerHTML.trim();
+        return { html: content.innerHTML.trim(), productUrl };
       }
     }
 
-    return 'Product details section not found';
+    return { html: 'Product details section not found', productUrl : productUrl };
   } catch (error) {
     console.error('Failed to fetch first product details:', error);
-    return 'Description unavailable';
+    return { html: 'Description unavailable', productUrl : null };
   }
 }
 
@@ -316,15 +309,21 @@ export async function getContent(MainCollection:string,type:string) {
     const mainurl = `https://paksha.com/collections/${MainCollection}`; 
   const filterUrl = `https://paksha.com/collections/${MainCollection}?filter.p.m.custom.product_types=${type}`;
 
-    let description = "";
+  let description = "";
+  let productUrl = "";
     if (type === "Hair Accessories" || type === "Bridal Set" || type === "Nose Pin" || type === "Waist Band" || type === "Armlet" || type === "Nose Ring" || type === "Nose Pin") {
-        description = await fetchFirstProductDetailsHTML(mainurl,weburl);
+        const webresult = await fetchFirstProductDetailsHTML(mainurl,weburl);
+        description = webresult.html;
+        productUrl = webresult.productUrl || "";
       }
     else {
-      description = await fetchFirstProductDetailsHTML(filterUrl,mainurl);
+      const web = await fetchFirstProductDetailsHTML(filterUrl,mainurl);
+        description = web.html;
+        productUrl = web.productUrl || "";
     }
-    
-    return description;
+
+    return { html: description, productUrl };
+
 }
 
 
@@ -419,9 +418,11 @@ const Tags = ["NEW",Type,...subtypes,stoneColor,plating];
 const allTags = Tags.filter(Boolean) as string[];
 
 //adding description
-const webhtml = await getContent(MainCollection,Type) || "No description available";
+const webresult = await getContent(MainCollection,Type) || "No description available";
+const html = webresult.html || "No description available";
+const producturl = webresult.productUrl || "No product link available";
 const sheetcontent = sheetData.find(row => row[7] === sku)?.[10] || "";
-const Bodyhtml = csvLiteralCell(formatProductDetailsHTML(webhtml, sheetcontent));
+const Bodyhtml = csvLiteralCell(formatProductDetailsHTML(html, sheetcontent,producturl));
 console.info({
   sku, 
   BodyhtmlLength: Bodyhtml?.length || 0, 

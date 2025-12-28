@@ -39,7 +39,7 @@ export default function Home() {
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
   );
-  // POST hook for CSV generation - UPDATED
+  // POST hook for CSV generation 
   const generateCSV = async (skuInput: string, detectedType: 'single' | 'multiple'): Promise<{ success: boolean; csvBlob?: Blob }> => {
     try {
       console.log('Calling API:', '/api/parseSKU');
@@ -53,7 +53,7 @@ export default function Home() {
         },
         body: JSON.stringify({ 
           sku: skuInput,
-          type: detectedType // You can use this in your backend if needed
+          type: detectedType 
         })
       });
 
@@ -142,9 +142,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-900 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Product Listing</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Product Listing</h1>
 
         {/* Error Display */}
         {error && (
