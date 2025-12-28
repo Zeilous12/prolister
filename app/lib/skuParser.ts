@@ -162,6 +162,16 @@ function escapeHtml(text: string): string {
   
   // return html;
 
+  function csvLiteralCell(html: string): string {
+  if (!html) return '""';
+
+  return `"${html
+    .replace(/\r?\n/g, '\\n')    // <-- REMOVE real newlines, replace with literal \n
+    .replace(/"/g, '""')         // <-- escape quotes
+  }"`;
+}
+
+
 export async function fetchFirstProductDetailsHTML(
   filterUrl: string,
   fallbackUrl: string
@@ -412,7 +422,7 @@ const allTags = Tags.filter(Boolean) as string[];
 //adding description
 const webhtml = await getContent(MainCollection,Type) || "No description available";
 const sheetcontent = sheetData.find(row => row[7] === sku)?.[10] || "";
-const Bodyhtml = formatProductDetailsHTML(webhtml, sheetcontent);
+const Bodyhtml = csvLiteralCell(formatProductDetailsHTML(webhtml, sheetcontent));
 console.info({
   sku, 
   BodyhtmlLength: Bodyhtml?.length || 0, 
