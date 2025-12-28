@@ -162,14 +162,13 @@ function escapeHtml(text: string): string {
   
   // return html;
 
-  function csvLiteralCell(html: string): string {
-  if (!html) return '""';
-
+function csvLiteralCell(html: string) {
   return `"${html
-    .replace(/\r?\n/g, '\\n')    // <-- REMOVE real newlines, replace with literal \n
-    .replace(/"/g, '""')         // <-- escape quotes
+    .replace(/\r?\n/g, '<br>')
+    .replace(/"/g, '""')
   }"`;
 }
+
 
 
 export async function fetchFirstProductDetailsHTML(
