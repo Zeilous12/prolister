@@ -161,11 +161,11 @@ function escapeHtml(text: string): string {
     // return html.replace(descriptionRegex, `$1${newContent}$3`);
   
   // return html;
-
-function csvLiteralCell(html: string) {
+function csvLiteralCell(html: string): string {
   return `"${html
-    .replace(/\r?\n/g, '<br>')
-    .replace(/"/g, '""')
+    .replace(/\r?\n/g, ' ')     // replace linebreaks with space
+    .replace(/\s{2,}/g, ' ')    // compress extra spaces
+    .replace(/"/g, '""')        // escape quotes
   }"`;
 }
 
