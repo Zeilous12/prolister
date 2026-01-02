@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import type { MetaFunction } from "@remix-run/cloudflare";
 export const meta: MetaFunction = () => {
   return [
@@ -89,14 +90,55 @@ export default function Home() {
     const url = window.URL.createObjectURL(csvBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'matrixify-import.csv';
+    a.download = 'Shopify-import.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     
-    setProcessStage('completed');
+    setProcessStage('ready');
   };
+  // Download XLSX handler
+const downloadXLSX = async () => {
+  if (!csvBlob) return;
+
+  const csvText = await csvBlob.text();
+
+  // Read CSV
+  const workbook = XLSX.read(csvText, { type: "string" });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+
+  // Rename second column header
+  if (worksheet["B1"]) {
+    worksheet["B1"].v = "Body HTML";
+  }
+
+
+  // Export XLSX
+  const xlsxArrayBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array"
+  });
+
+  const xlsxBlob = new Blob(
+    [xlsxArrayBuffer],
+    { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+  );
+
+  // Download
+  const url = URL.createObjectURL(xlsxBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "matrixify-import.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  setProcessStage("ready");
+};
+
 
   // Process SKU handler
   const handleSkuSubmit = async () => {
@@ -164,7 +206,7 @@ export default function Home() {
                 />
                 <div className="text-left flex-1">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-                    Automate Product Listing
+                    Your Product Listing Assistant
                   </h2>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
                     <button
@@ -206,7 +248,7 @@ export default function Home() {
                     rows={5}
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Supports direct past from Excel.
+                    Supports direct paste from Excel
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -241,7 +283,7 @@ export default function Home() {
                   Processing {detectedType === 'single' ? 'single SKU' : 'multiple SKUs'}
                 </p>
                 <p className="text-sm text-gray-500">
-                  ...This may take a moment...
+                  This may take a moment
                 </p>
               </div>
             </Card>
@@ -264,37 +306,19 @@ export default function Home() {
                     onClick={downloadCSV}
                     className="px-4 py-2 bg-gray-900 text-white font-medium rounded-md hover:bg-blue-700 transition"
                   >
-                    Download CSV
+                    Shopify import
+                  </button>
+                  <button
+                    onClick={downloadXLSX}
+                    className="px-4 py-2 bg-gray-900 text-white font-medium rounded-md hover:bg-blue-700 transition"
+                  >
+                    matrixify import
                   </button>
                   <button
                     onClick={handleReset}
                     className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition"
                   >
                     Start Over
-                  </button>
-                </div>
-              </div>
-            </Card>
-          </Section>
-        )}
-
-        {/* Completed State */}
-        {processStage === 'completed' && (
-          <Section>
-            <Card className="p-6">
-              <div className="text-center space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Data Downloaded Successfully!
-                </h3>
-                <p className="text-gray-600">
-                  Your Product import file has been downloaded.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={handleReset}
-                    className="px-4 py-2 bg-gray-900 text-white font-medium rounded-md hover:bg-blue-700 transition"
-                  >
-                    Process More SKUs
                   </button>
                 </div>
               </div>

@@ -23,7 +23,7 @@ export async function generateData(skus: string[],sheetJSON: Record<string, stri
         }, "DEBUG: Data state before processing");
   console.info({ rowCount: sheetData.length }, "Successfully fetched sheet data");
     const headers = [
-    "Title", "Body HTML", "Vendor", "Type", 
+    "Title", "Description", "Vendor", "Type", 
     "Tags", "Status", "Custom Collections", "SEO Title"
   ];
 
